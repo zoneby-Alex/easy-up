@@ -3,5 +3,13 @@
   "upload_dir": "./uploads",
   "max_file_size": 52428800,
   "allow_deletes": true,
-  "title": "局域网图片传输工具"
+  "title": "局域网图片传输工具",
+  "users": [
+    {
+      "username": "admin",
+      "password": "admin123"
+    }
+  ],
+  "session_secret": "",
+  "session_ttl_hours": 12
 }

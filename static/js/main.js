@@ -2,6 +2,15 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     let currentPath = '';
+    let refreshTimer = null;
+
+    const loginSection = document.getElementById('loginSection');
+    const appSection = document.getElementById('appSection');
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('usernameInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const currentUser = document.getElementById('currentUser');
+    const logoutBtn = document.getElementById('logoutBtn');
     const dropArea = document.getElementById('dropArea');
     const fileInput = document.getElementById('fileInput');
     const browseBtn = document.getElementById('browseBtn');
@@ -13,103 +22,162 @@ document.addEventListener('DOMContentLoaded', function() {
     const breadcrumb = document.getElementById('breadcrumb');
     const createFolderBtn = document.getElementById('createFolderBtn');
 
-    // 事件监听器
+    loginForm.addEventListener('submit', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
     browseBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
+    createFolderBtn.addEventListener('click', createFolder);
 
-    if (createFolderBtn) {
-        createFolderBtn.addEventListener('click', async () => {
-            const folderName = prompt('请输入新文件夹名称：');
-            if (!folderName) return;
-            
-            try {
-                const res = await fetch('/api/create_folder', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: currentPath, folder_name: folderName })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showMessage(data.message, 'success');
-                    loadFiles();
-                } else {
-                    showMessage(data.message, 'error');
-                }
-            } catch (e) {
-                showMessage('创建文件夹失败', 'error');
-            }
-        });
-    }
-
-    function updateBreadcrumb() {
-        if (!breadcrumb) return;
-        if (!currentPath) {
-            breadcrumb.innerHTML = '<span style="cursor:pointer;" onclick="navigateTo(\'\')">🏠 首页</span>';
-        } else {
-            let html = '<span style="cursor:pointer;" onclick="navigateTo(\'\')">🏠 首页</span>';
-            const parts = currentPath.split('/');
-            let accumPath = '';
-            parts.forEach((part) => {
-                if (!part) return;
-                accumPath += (accumPath ? '/' : '') + part;
-                html += ` / <span style="cursor:pointer;" onclick="navigateTo('${accumPath}')">${part}</span>`;
-            });
-            breadcrumb.innerHTML = html;
-        }
-    }
-
-    window.navigateTo = function(path) {
-        currentPath = path;
-        loadFiles();
-    };
-
-    window.enterFolder = function(folderName) {
-        if (currentPath) {
-            currentPath += '/' + folderName;
-        } else {
-            currentPath = folderName;
-        }
-        loadFiles();
-    };
-
-    // 拖放事件
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
     });
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+    });
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    checkSession();
+
+    async function checkSession() {
+        try {
+            const response = await fetch('/api/session');
+            const data = await response.json();
+            if (data.authenticated) {
+                showApp(data.username);
+            } else {
+                showLogin();
+            }
+        } catch (error) {
+            showLogin();
+            showMessage('无法检查登录状态', 'error');
+        }
+    }
+
+    async function handleLogin(event) {
+        event.preventDefault();
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: usernameInput.value,
+                    password: passwordInput.value
+                })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                showMessage(data.message || '登录失败', 'error');
+                return;
+            }
+            passwordInput.value = '';
+            showApp(data.username);
+        } catch (error) {
+            showMessage('登录失败', 'error');
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            await fetch('/api/logout', { method: 'POST' });
+        } finally {
+            showLogin();
+        }
+    }
+
+    function showLogin() {
+        loginSection.hidden = false;
+        appSection.hidden = true;
+        currentPath = '';
+        filesGrid.replaceChildren();
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    function showApp(username) {
+        loginSection.hidden = true;
+        appSection.hidden = false;
+        currentUser.textContent = username ? `当前用户：${username}` : '';
+        loadFiles();
+        if (!refreshTimer) {
+            refreshTimer = setInterval(loadFiles, 30000);
+        }
+    }
+
+    async function createFolder() {
+        const folderName = prompt('请输入新文件夹名称：');
+        if (!folderName) return;
+
+        try {
+            const res = await fetch('/api/create_folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: currentPath, folder_name: folderName })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showMessage(data.message, 'success');
+                loadFiles();
+            } else {
+                showMessage(data.message || '创建文件夹失败', 'error');
+            }
+        } catch (e) {
+            showMessage('创建文件夹失败', 'error');
+        }
+    }
+
+    function updateBreadcrumb() {
+        breadcrumb.replaceChildren();
+        const home = makeLinkButton('首页', () => navigateTo(''));
+        breadcrumb.appendChild(home);
+
+        if (!currentPath) return;
+
+        const parts = currentPath.split('/').filter(Boolean);
+        let accumPath = '';
+        parts.forEach(part => {
+            accumPath += (accumPath ? '/' : '') + part;
+            const targetPath = accumPath;
+            breadcrumb.appendChild(document.createTextNode(' / '));
+            breadcrumb.appendChild(makeLinkButton(part, () => navigateTo(targetPath)));
+        });
+    }
+
+    function makeLinkButton(text, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'link-btn';
+        button.textContent = text;
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    function navigateTo(path) {
+        currentPath = path;
+        loadFiles();
+    }
+
+    function enterFolder(folderName) {
+        currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+        loadFiles();
+    }
 
     function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
     }
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-        dropArea.classList.add('dragover');
-    }
-
-    function unhighlight() {
-        dropArea.classList.remove('dragover');
-    }
-
-    // 处理文件拖放
-    dropArea.addEventListener('drop', handleDrop, false);
-
     function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files);
+        handleFiles(e.dataTransfer.files);
     }
 
     function handleFileSelect(e) {
-        const files = e.target.files;
-        handleFiles(files);
+        handleFiles(e.target.files);
+        fileInput.value = '';
     }
 
     function handleFiles(files) {
@@ -117,10 +185,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function uploadFile(file) {
-        // 验证文件类型
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml'];
-        if (!allowedTypes.includes(file.type)) {
-            showMessage(`文件 "${file.name}" 类型不被支持，请选择图片文件`, 'error');
+        const allowedExts = [
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'md', 'markdown', 'txt', 'csv', 'json', 'xml', 'yaml', 'yml',
+            'go', 'py', 'js', 'ts', 'jsx', 'tsx', 'java', 'c', 'cpp', 'h', 'hpp',
+            'cs', 'rs', 'php', 'rb', 'sh', 'ps1', 'bat', 'sql', 'html', 'css',
+            'zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz'
+        ];
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!allowedExts.includes(ext)) {
+            showMessage(`文件 "${file.name}" 类型不被支持`, 'error');
             return;
         }
 
@@ -132,35 +207,37 @@ document.addEventListener('DOMContentLoaded', function() {
             progressContainer.style.display = 'flex';
 
             const xhr = new XMLHttpRequest();
-
-            // 监听上传进度
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    updateProgress(Math.round(percentComplete));
+                    updateProgress(Math.round((e.loaded / e.total) * 100));
                 }
             });
 
-            // 处理响应
             xhr.addEventListener('load', () => {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        showMessage(`文件 "${file.name}" 上传成功！`, 'success');
-                        loadFiles(); // 重新加载文件列表
-                    } else {
-                        showMessage(`上传失败: ${response.message}`, 'error');
-                    }
+                let response = {};
+                try {
+                    response = JSON.parse(xhr.responseText || '{}');
+                } catch (error) {
+                    response = {};
+                }
+                if (xhr.status === 401) {
+                    showMessage('登录已失效，请重新登录', 'error');
+                    showLogin();
+                } else if (xhr.status >= 200 && xhr.status < 300 && response.success) {
+                    const finalName = response.name || file.name;
+                    showMessage(`文件 "${finalName}" 上传成功！`, 'success');
+                    loadFiles();
                 } else {
-                    showMessage(`上传失败: ${xhr.statusText}`, 'error');
+                    showMessage(`上传失败: ${response.message || xhr.statusText}`, 'error');
                 }
                 progressContainer.style.display = 'none';
+                updateProgress(0);
             });
 
-            // 处理错误
             xhr.addEventListener('error', () => {
-                showMessage(`上传失败: 网络错误`, 'error');
+                showMessage('上传失败: 网络错误', 'error');
                 progressContainer.style.display = 'none';
+                updateProgress(0);
             });
 
             xhr.open('POST', '/api/upload?path=' + encodeURIComponent(currentPath));
@@ -168,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             showMessage(`上传失败: ${error.message}`, 'error');
             progressContainer.style.display = 'none';
+            updateProgress(0);
         }
     }
 
@@ -176,11 +254,15 @@ document.addEventListener('DOMContentLoaded', function() {
         progressText.textContent = percent + '%';
     }
 
-    // 加载文件列表
     async function loadFiles() {
         try {
             updateBreadcrumb();
             const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`);
+            if (response.status === 401) {
+                showMessage('登录已失效，请重新登录', 'error');
+                showLogin();
+                return;
+            }
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -192,90 +274,146 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 渲染文件列表
     function renderFiles(files) {
-        filesGrid.innerHTML = '';
+        filesGrid.replaceChildren();
 
         if (files.length === 0) {
-            filesGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #7f8c8d;">暂无文件或空文件夹</p>';
+            const empty = document.createElement('p');
+            empty.className = 'empty-state';
+            empty.textContent = '暂无文件或空文件夹';
+            filesGrid.appendChild(empty);
             return;
         }
 
-        // 文件夹优先
         files.sort((a, b) => {
             if (a.isDir === b.isDir) return a.name.localeCompare(b.name);
             return a.isDir ? -1 : 1;
         });
 
-        files.forEach(file => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-
-            if (file.isDir) {
-                fileItem.innerHTML = `
-                    <div class="file-icon" style="cursor:pointer;" onclick="enterFolder('${file.name}')">📁</div>
-                    <div class="file-info">
-                        <h3 title="${file.name}" style="cursor:pointer; color:#3498db;" onclick="enterFolder('${file.name}')">${truncateFileName(file.name, 20)}</h3>
-                        <p>文件夹</p>
-                        <p>${formatDate(file.ModTime)}</p>
-                    </div>
-                    <div class="file-actions">
-                        <button class="action-btn delete-btn" onclick="deleteFile('${file.name}')">删除</button>
-                    </div>
-                `;
-            } else {
-                let fileContent = '';
-                let actionButtons = '';
-                const ext = file.name.split('.').pop().toLowerCase();
-                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-
-                if (imageExts.includes(ext)) {
-                    fileContent = `<img src="${file.URL}" alt="${file.name}" class="preview" style="display:none;" data-loaded="false" onload="this.dataset.loaded='true';" onerror="this.dataset.error='true';"><div class="file-icon default-icon">🖼️</div>`;
-                    actionButtons = `<button class="action-btn preview-btn" onclick="togglePreview(this)">预览</button>`;
-                } else {
-                    fileContent = getFileIcon(ext);
-                }
-
-                const fileSize = formatFileSize(file.Size);
-
-                fileItem.innerHTML = `
-                    ${fileContent}
-                    <div class="file-info">
-                        <h3 title="${file.name}">${truncateFileName(file.name, 20)}</h3>
-                        <p>${fileSize}</p>
-                        <p>${formatDate(file.ModTime)}</p>
-                    </div>
-                    <div class="file-actions">
-                        ${actionButtons}
-                        <button class="action-btn download-btn" onclick="window.location.href='${file.URL}'">下载</button>
-                        <button class="action-btn delete-btn" onclick="deleteFile('${file.name}')">删除</button>
-                    </div>
-                `;
-            }
-            filesGrid.appendChild(fileItem);
-        });
+        files.forEach(file => filesGrid.appendChild(createFileItem(file)));
     }
 
-    // 获取文件类型图标
+    function createFileItem(file) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+
+        if (file.isDir) {
+            const icon = document.createElement('button');
+            icon.type = 'button';
+            icon.className = 'file-icon folder-icon';
+            icon.textContent = '📁';
+            icon.addEventListener('click', () => enterFolder(file.name));
+            fileItem.appendChild(icon);
+
+            fileItem.appendChild(createInfo(file.name, '文件夹', formatDate(file.ModTime), () => enterFolder(file.name)));
+            fileItem.appendChild(createActions([{ label: '删除', className: 'delete-btn', onClick: () => deleteFile(file.name, true) }]));
+            return fileItem;
+        }
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        let previewImage = null;
+        let defaultIcon = null;
+
+        if (imageExts.includes(ext)) {
+            previewImage = document.createElement('img');
+            previewImage.src = file.URL;
+            previewImage.alt = file.name;
+            previewImage.className = 'preview';
+            previewImage.hidden = true;
+
+            defaultIcon = document.createElement('div');
+            defaultIcon.className = 'file-icon default-icon';
+            defaultIcon.textContent = '🖼️';
+            fileItem.appendChild(previewImage);
+            fileItem.appendChild(defaultIcon);
+        } else {
+            const icon = document.createElement('div');
+            icon.className = 'file-icon';
+            icon.textContent = getFileIcon(ext);
+            fileItem.appendChild(icon);
+        }
+
+        fileItem.appendChild(createInfo(file.name, formatFileSize(file.Size), formatDate(file.ModTime)));
+
+        const actions = [];
+        if (previewImage && defaultIcon) {
+            actions.push({
+                label: '预览',
+                className: 'preview-btn',
+                onClick: (button) => togglePreview(button, previewImage, defaultIcon)
+            });
+        }
+        actions.push({ label: '下载', className: 'download-btn', onClick: () => { window.location.href = file.URL; } });
+        actions.push({ label: '删除', className: 'delete-btn', onClick: () => deleteFile(file.name, false) });
+        fileItem.appendChild(createActions(actions));
+        return fileItem;
+    }
+
+    function createInfo(name, line1, line2, onTitleClick) {
+        const info = document.createElement('div');
+        info.className = 'file-info';
+
+        const title = document.createElement(onTitleClick ? 'button' : 'h3');
+        if (onTitleClick) {
+            title.type = 'button';
+            title.className = 'file-title-btn';
+            title.addEventListener('click', onTitleClick);
+        }
+        title.title = name;
+        title.textContent = truncateFileName(name, 20);
+        info.appendChild(title);
+
+        const first = document.createElement('p');
+        first.textContent = line1;
+        info.appendChild(first);
+
+        const second = document.createElement('p');
+        second.textContent = line2;
+        info.appendChild(second);
+
+        return info;
+    }
+
+    function createActions(actions) {
+        const actionWrap = document.createElement('div');
+        actionWrap.className = 'file-actions';
+
+        actions.forEach(action => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `action-btn ${action.className}`;
+            button.textContent = action.label;
+            button.addEventListener('click', () => action.onClick(button));
+            actionWrap.appendChild(button);
+        });
+
+        return actionWrap;
+    }
+
     function getFileIcon(ext) {
         const icons = {
-            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'bmp': '🖼️', 'webp': '🖼️',
-            'pdf': '📄', 'doc': '📝', 'docx': '📝', 'txt': '📋',
-            'zip': '📦', 'rar': '📦', '7z': '📦',
-            'mp3': '🎵', 'wav': '🎵', 'flac': '🎵',
-            'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
-            'folder': '📁'
+            jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', webp: '🖼️',
+            pdf: '📄', doc: '📝', docx: '📝', txt: '📋',
+            xls: '📊', xlsx: '📊', csv: '📊',
+            ppt: '📽️', pptx: '📽️',
+            md: '📋', markdown: '📋', json: '{}', xml: '<>', yaml: 'YML', yml: 'YML',
+            go: 'GO', py: 'PY', js: 'JS', ts: 'TS', jsx: 'JSX', tsx: 'TSX',
+            java: 'JAVA', c: 'C', cpp: 'C++', h: 'H', hpp: 'H++', cs: 'CS',
+            rs: 'RS', php: 'PHP', rb: 'RB', sh: 'SH', ps1: 'PS', bat: 'BAT',
+            sql: 'SQL', html: 'HTML', css: 'CSS',
+            zip: '📦', rar: '📦', '7z': '📦', tar: '📦', gz: '📦', tgz: '📦', bz2: '📦', xz: '📦',
+            mp3: '🎵', wav: '🎵', flac: '🎵',
+            mp4: '🎬', avi: '🎬', mov: '🎬'
         };
-        return `<div class="file-icon">${icons[ext] || '📄'}</div>`;
+        return icons[ext] || '📄';
     }
 
-    // 截断文件名
     function truncateFileName(name, maxLength) {
         if (name.length <= maxLength) return name;
         return name.substr(0, maxLength - 3) + '...';
     }
 
-    // 格式化文件大小
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -284,68 +422,56 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // 格式化日期
     function formatDate(dateString) {
         const date = new Date(dateString);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 
-    // 切换图片预览
-    window.togglePreview = function(btn) {
-        const fileItem = btn.closest('.file-item');
-        const img = fileItem.querySelector('img.preview');
-        const icon = fileItem.querySelector('.default-icon');
-        
-        if (img.style.display === 'none') {
-            img.style.display = 'block';
-            if (icon) icon.style.display = 'none';
+    function togglePreview(btn, img, icon) {
+        if (img.hidden) {
+            img.hidden = false;
+            icon.hidden = true;
             btn.textContent = '隐藏';
             btn.classList.add('active');
-            btn.style.background = '#f39c12';
-            btn.style.color = 'white';
         } else {
-            img.style.display = 'none';
-            if (icon) icon.style.display = 'block';
+            img.hidden = true;
+            icon.hidden = false;
             btn.textContent = '预览';
             btn.classList.remove('active');
-            btn.style.background = '';
-            btn.style.color = '';
         }
-    };
+    }
 
-    // 删除文件或文件夹
-    window.deleteFile = async function(filename) {
-        if (!confirm(`确定要删除 "${filename}" 吗？此操作不可撤销。如果这是文件夹，将删除其内部所有内容！`)) {
-            return;
-        }
+    async function deleteFile(filename, isDir) {
+        const promptText = isDir
+            ? `确定要删除空文件夹 "${filename}" 吗？非空文件夹不会被删除。`
+            : `确定要删除文件 "${filename}" 吗？此操作不可撤销。`;
+        if (!confirm(promptText)) return;
 
         try {
             const response = await fetch(`/api/delete/${encodeURIComponent(filename)}?path=${encodeURIComponent(currentPath)}`, {
                 method: 'DELETE'
             });
+            const result = await response.json();
 
-            if (response.ok) {
-                const result = await response.json();
+            if (response.status === 401) {
+                showMessage('登录已失效，请重新登录', 'error');
+                showLogin();
+            } else if (response.ok && result.success) {
                 showMessage(result.message, 'success');
-                loadFiles(); // 重新加载文件列表
+                loadFiles();
             } else {
-                const error = await response.json();
-                showMessage(error.message || '删除失败', 'error');
+                showMessage(result.message || '删除失败', 'error');
             }
         } catch (error) {
             showMessage(`删除失败: ${error.message}`, 'error');
         }
-    };
+    }
 
-    // 显示状态消息
     function showMessage(message, type) {
         statusMessage.textContent = message;
         statusMessage.className = `status-message ${type}`;
-
-        // 显示消息
         statusMessage.classList.add('show');
 
-        // 3秒后隐藏
         setTimeout(() => {
             statusMessage.classList.remove('show');
         }, 3000);
@@ -356,10 +482,4 @@ document.addEventListener('DOMContentLoaded', function() {
         statusMessage.className = `status-message ${type}`;
         statusMessage.classList.add('show');
     }
-
-    // 页面加载时获取文件列表
-    loadFiles();
-
-    // 每30秒自动刷新一次文件列表
-    setInterval(loadFiles, 30000);
 });

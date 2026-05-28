@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>局域网图片传输工具</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body>
     <div id="statusMessage" class="status-message"></div>
@@ -13,10 +13,27 @@
             <h1>局域网图片传输工具</h1>
         </header>
         <main>
+            <section id="loginSection" class="login-section">
+                <form id="loginForm" class="login-form">
+                    <h2>登录</h2>
+                    <label for="usernameInput">用户名</label>
+                    <input type="text" id="usernameInput" autocomplete="username" required>
+                    <label for="passwordInput">密码</label>
+                    <input type="password" id="passwordInput" autocomplete="current-password" required>
+                    <button type="submit" class="primary-btn">登录</button>
+                </form>
+            </section>
+
+            <section id="appSection" class="app-section" hidden>
+                <div class="session-bar">
+                    <span id="currentUser"></span>
+                    <button id="logoutBtn" class="action-btn">退出登录</button>
+                </div>
+
             <section class="upload-section">
                 <div id="dropArea" class="upload-area">
-                    <p>拖拽图片到这里，或者点击选择文件</p>
-                    <input type="file" id="fileInput" multiple accept="image/jpeg, image/png, image/gif, image/bmp, image/webp, image/svg+xml" style="display: none;">
+                    <p>拖拽图片或文档到这里，或者点击选择文件</p>
+                    <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.md,.markdown,.txt,.csv,.json,.xml,.yaml,.yml,.go,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.hpp,.cs,.rs,.php,.rb,.sh,.ps1,.bat,.sql,.html,.css,.zip,.rar,.7z,.tar,.gz,.tgz,.bz2,.xz" style="display: none;">
                     <button id="browseBtn">选择文件</button>
                 </div>
                 <div id="progressContainer" class="progress-container" style="display: none;">
@@ -36,11 +53,12 @@
                     <!-- 文件列表将由 JS 动态生成 -->
                 </div>
             </section>
+            </section>
         </main>
         <footer>
             <p>基于 Go 语言开发的局域网文件传输工具</p>
         </footer>
     </div>
-    <script src="/static/js/main.js?v=2"></script>
+    <script src="/static/js/main.js?v=3"></script>
 </body>
 </html>
