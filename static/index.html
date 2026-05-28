@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网图片传输工具</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
+</head>
+<body>
+    <div id="statusMessage" class="status-message"></div>
+    <div class="container">
+        <header>
+            <h1>局域网图片传输工具</h1>
+        </header>
+        <main>
+            <section class="upload-section">
+                <div id="dropArea" class="upload-area">
+                    <p>拖拽图片到这里，或者点击选择文件</p>
+                    <input type="file" id="fileInput" multiple accept="image/jpeg, image/png, image/gif, image/bmp, image/webp, image/svg+xml" style="display: none;">
+                    <button id="browseBtn">选择文件</button>
+                </div>
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="progressText">0%</div>
+                </div>
+            </section>
+            
+            <section class="files-section">
+                <div class="files-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="breadcrumb" style="margin-bottom: 0;">🏠 首页</h2>
+                    <button id="createFolderBtn" class="action-btn" style="background:#3498db;color:white;padding:8px 15px;font-size:0.9rem;">+ 新建文件夹</button>
+                </div>
+                <div id="filesGrid" class="files-grid">
+                    <!-- 文件列表将由 JS 动态生成 -->
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>基于 Go 语言开发的局域网文件传输工具</p>
+        </footer>
+    </div>
+    <script src="/static/js/main.js?v=2"></script>
+</body>
+</html>

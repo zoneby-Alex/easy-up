@@ -1,0 +1,359 @@
+/* static/css/style.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 2.2rem;
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8rem;
+    }
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* 上传区域样式 */
+.upload-section {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.upload-area {
+    border: 3px dashed #3498db;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8fafc;
+}
+
+.upload-area:hover, .upload-area.dragover {
+    background-color: #e3f2fd;
+    border-color: #2980b9;
+}
+
+.upload-area p {
+    margin-bottom: 20px;
+    color: #7f8c8d;
+    font-size: 1.1rem;
+}
+
+#browseBtn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#browseBtn:hover {
+    background: #2980b9;
+}
+
+/* 进度条样式 */
+.progress-container {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar {
+    flex-grow: 1;
+    height: 20px;
+    background-color: #ecf0f1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+#progressText {
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 40px;
+}
+
+/* 文件区域样式 */
+.files-section {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.files-section h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.files-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.file-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    background: #fff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.file-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.file-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.file-info {
+    margin-bottom: 10px;
+}
+
+.file-info h3 {
+    font-size: 0.9rem;
+    word-break: break-all;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+
+.file-info p {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.file-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.action-btn {
+    background: #ecf0f1;
+    color: #2c3e50;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #bdc3c7;
+}
+
+.download-btn {
+    background: #2ecc71;
+    color: white;
+}
+
+.download-btn:hover {
+    background: #27ae60;
+}
+
+.delete-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: #c0392b;
+}
+
+/* 图片预览 */
+img.preview {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+/* 状态消息样式 */
+.status-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.status-message.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.status-message.success {
+    background: #2ecc71;
+}
+
+.status-message.error {
+    background: #e74c3c;
+}
+
+.status-message.loading {
+    background: #3498db;
+}
+
+/* 页脚样式 */
+footer {
+    margin-top: 30px;
+    text-align: center;
+    padding: 20px;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    .upload-section, .files-section {
+        padding: 20px;
+    }
+
+    .upload-area {
+        padding: 30px 20px;
+    }
+
+    .files-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .file-item {
+        padding: 10px;
+    }
+
+    .file-actions {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .action-btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .files-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .upload-area p {
+        font-size: 1rem;
+    }
+
+    #browseBtn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+        color: #f0f0f0;
+    }
+
+    .container, header, .upload-section, .files-section, footer, .file-item {
+        background-color: #2d2d2d;
+        color: #f0f0f0;
+    }
+
+    .upload-area {
+        background-color: #3a3a3a;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+        background-color: #404040;
+    }
+
+    .file-item {
+        border-color: #555;
+    }
+
+    .file-info h3 {
+        color: #f0f0f0;
+    }
+
+    .file-info p {
+        color: #aaa;
+    }
+
+    .progress-bar {
+        background-color: #444;
+    }
+}
