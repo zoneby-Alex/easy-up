@@ -60,7 +60,7 @@ func initConfig() {
 	config = Config{
 		Port:            "8080",
 		UploadDir:       "./uploads",
-		MaxFileSize:     52428800,
+		MaxFileSize:     5368709120,
 		AllowDeletes:    true,
 		Title:           "局域网图片传输工具",
 		Users:           []UserConfig{{Username: "admin", Password: "admin123"}},

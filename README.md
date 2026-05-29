@@ -45,7 +45,7 @@ Edit `config.json`:
 {
   "port": "8080",
   "upload_dir": "./uploads",
-  "max_file_size": 52428800,
+  "max_file_size": 5368709120,
   "allow_deletes": true,
   "title": "局域网图片传输工具",
   "users": [
@@ -64,7 +64,7 @@ Edit `config.json`:
 Command-line flags can override part of the configuration:
 
 ```powershell
-go run . -port 8090 -dir ./uploads -max-size 52428800 -title "LAN Image Transfer"
+go run . -port 8090 -dir ./uploads -max-size 5368709120 -title "LAN Image Transfer"
 ```
 
 ## API
